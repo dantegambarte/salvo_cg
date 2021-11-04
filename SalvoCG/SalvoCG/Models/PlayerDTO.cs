@@ -5,10 +5,9 @@ using System.Threading.Tasks;
 
 namespace SalvoCG.Models
 {
-    public class Game
+    public class PlayerDTO
     {
         public long Id { get; set; }
-        public DateTime? CreationDate{ get; set; }
-        public ICollection<GamePlayer> GamePlayers { get; set; }
+        public string Email { get; set; }
     }
 }

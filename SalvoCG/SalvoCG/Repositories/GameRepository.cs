@@ -1,4 +1,5 @@
-﻿using SalvoCG.Models;
+﻿using Microsoft.EntityFrameworkCore;
+using SalvoCG.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +20,8 @@ namespace SalvoCG.Repositories
 
         public IEnumerable<Game> GetAllGamesWhitPlayers()
         {
-            throw new NotImplementedException();
+            return FindAll(source => source.Include(game => game.GamePlayers)
+            .ThenInclude(gamePlayer => gamePlayer.Player)).OrderBy(game => game.CreationDate).ToList();
         }
     }
 }
