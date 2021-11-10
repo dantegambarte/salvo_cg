@@ -16,6 +16,8 @@ namespace SalvoCG.Models
         public DbSet<GamePlayer> GamePlayers { get; set; }
         public DbSet<Ship> Ships { get; set; }
         public DbSet<ShipLocation> ShipLocations { get; set; }
+        public DbSet<Salvo> Salvo { get; set; }
+        public DbSet<SalvoLocation> SalvoLocations { get; set; }
 
     }
 }
