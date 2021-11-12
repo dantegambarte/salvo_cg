@@ -18,6 +18,7 @@ namespace SalvoCG.Models
         public DbSet<ShipLocation> ShipLocations { get; set; }
         public DbSet<Salvo> Salvo { get; set; }
         public DbSet<SalvoLocation> SalvoLocations { get; set; }
+        public DbSet<Score> Scores { get; set; }
 
     }
 }
