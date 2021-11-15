@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using SalvoCG.Models;
 using SalvoCG.Repositories;
 using System;
@@ -10,8 +11,9 @@ using System.Threading.Tasks;
 
 namespace SalvoCG.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/gamePlayers")]
     [ApiController]
+    [Authorize("PlayerOnly")]
     public class GamePlayersController : ControllerBase
     {
         private IGamePlayerRepository _repository;
