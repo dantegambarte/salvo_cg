@@ -21,24 +21,25 @@ namespace SalvoCG.Controllers
         {
             _repository = repository;
         }
+
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] PlayerDTO player)
         {
             try
             {
                 Player user = _repository.FindByEmail(player.Email);
-                if (user == null || !String.Equals(user.Password, player.Password))
-                    return Unauthorized();
+                if (user == null || !String.Equals(user.Password, player.Password)) return Unauthorized();
 
                 var claims = new List<Claim>
                 {
-                    new Claim("Player", user.Email)
+                    new Claim("Player", user.Email),
                 };
 
                 var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
 
                 await HttpContext.SignInAsync(
-                    CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
+                    CookieAuthenticationDefaults.AuthenticationScheme,
+                    new ClaimsPrincipal(claimsIdentity));
 
                 return Ok();
             }
