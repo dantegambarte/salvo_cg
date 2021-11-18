@@ -9,5 +9,6 @@ namespace SalvoCG.Repositories
     public interface IGamePlayerRepository
     {
         GamePlayer GetGamePlayerView(long idGamePlayer);
+        void Save(GamePlayer gamePlayer);
     }
 }

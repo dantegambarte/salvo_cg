@@ -28,7 +28,11 @@ namespace SalvoCG.Controllers
         {
             try
             {
+                string email = User.FindFirst("Player") != null ? User.FindFirst("Player").Value : "Guest";
+
                 var gp = _repository.GetGamePlayerView(id);
+                //veririficar si el gp corresponde al mismo emaild el usuarioa utenticado
+                if (gp.Player.Email != email) return Forbid();
                 var gameView = new GameViewDTO
                 {
                     Id = gp.Id,
