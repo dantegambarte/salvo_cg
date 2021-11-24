@@ -3,6 +3,7 @@
     data: {
         games: [],
         scores: [],
+        name: "",
         email: "",
         password: "",
         modal: {

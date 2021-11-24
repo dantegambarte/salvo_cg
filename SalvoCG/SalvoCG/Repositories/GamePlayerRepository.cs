@@ -14,6 +14,14 @@ namespace SalvoCG.Repositories
 
         }
 
+        public GamePlayer FindById(long Id)
+        {
+            return FindByCondition(gp => gp.Id == Id)
+                .Include(gp => gp.Player)
+                .Include(gp => gp.Ships)
+                .FirstOrDefault();
+        }
+
         public GamePlayer GetGamePlayerView(long idGamePlayer)
         {
             return FindAll(
@@ -41,8 +49,10 @@ namespace SalvoCG.Repositories
 
         public void Save(GamePlayer gamePlayer)
         {
-            Create(gamePlayer);
+            if (gamePlayer.Id == 0) Create(gamePlayer);
+            else Update(gamePlayer);
             SaveChanges();
         }
+
     }
 }
