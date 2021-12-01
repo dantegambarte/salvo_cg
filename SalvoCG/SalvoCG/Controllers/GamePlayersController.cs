@@ -72,7 +72,11 @@ namespace SalvoCG.Controllers
                             Id = salvoLocation.Id,
                             Location = salvoLocation.Location
                         }).ToList()
-                    })).ToList()
+                    })).ToList(),
+                    Hits = gp.GetHits(),
+                    HitsOpponent = gp.GetOpponent()?.GetHits(),
+                    Sunks = gp.GetSunks(),
+                    SunksOpponent = gp.GetOpponent()?.GetSunks()
                 };
 
                 return Ok(gameView);
@@ -127,7 +131,7 @@ namespace SalvoCG.Controllers
                 GamePlayer gamePlayer = _repository.FindById(Id); //gameplayer que esta logeado
                 GamePlayer opponent = gamePlayer.GetOpponent();
                 opponent = _repository.FindById(opponent.Id);
-                if (gamePlayer.Game.GamePlayers.Count() != 2) return StatusCode(403, "No hay a quien disprar");
+                if (gamePlayer.Game.GamePlayers.Count() != 2) return StatusCode(403, "No hay a oponente");
                 if (gamePlayer == null) return StatusCode(403, "No existe el juego");
                 if (gamePlayer.Player.Id != player.Id) return StatusCode(403, "El jugador no se encuentra en este juego");
                 if (gamePlayer.Player.Email != email) return StatusCode(403, "El jugador no se encuentra en este juego");
