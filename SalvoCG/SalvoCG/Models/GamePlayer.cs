@@ -19,5 +19,9 @@ namespace SalvoCG.Models
         {
             return Player.GetScore(Game);
         }
+        public GamePlayer GetOpponent()
+        {
+            return Game.GamePlayers.FirstOrDefault(gp => gp.Id != Id);
+        }
     }
 }

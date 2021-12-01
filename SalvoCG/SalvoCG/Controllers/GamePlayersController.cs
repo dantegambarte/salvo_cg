@@ -116,5 +116,46 @@ namespace SalvoCG.Controllers
             }
         }
 
+
+        [HttpPost("{id}/salvos")]
+        public IActionResult Post(long Id, [FromBody] SalvoDTO salvo)
+        {
+            try
+            {
+                string email = User.FindFirst("Player") != null ? User.FindFirst("Player").Value : "Guest";
+                Player player = _playerRepository.FindByEmail(email);
+                GamePlayer gamePlayer = _repository.FindById(Id); //gameplayer que esta logeado
+                GamePlayer opponent = gamePlayer.GetOpponent();
+                opponent = _repository.FindById(opponent.Id);
+                if (gamePlayer.Game.GamePlayers.Count() != 2) return StatusCode(403, "No hay a quien disprar");
+                if (gamePlayer == null) return StatusCode(403, "No existe el juego");
+                if (gamePlayer.Player.Id != player.Id) return StatusCode(403, "El jugador no se encuentra en este juego");
+                if (gamePlayer.Player.Email != email) return StatusCode(403, "El jugador no se encuentra en este juego");
+                if (opponent == null) return StatusCode(403, "No existe oponente");
+                if (gamePlayer.Ships.Count() == 0) return StatusCode(403, "El usuario logueado no ha posicionado los barcos");
+                if (opponent.Ships.Count() == 0) return StatusCode(403, "El oponente no ha posicionado los barcos");
+                if (gamePlayer.Ships.Count != 5) return StatusCode(403, "Las naves no estan posicionadas");
+                if (opponent.Ships.Count != 5) return StatusCode(403, "Las naves del oponente no estan posicionadas");
+                if (gamePlayer.Salvos.Count > opponent.Salvos.Count) return StatusCode(403, "No es tu turno");
+                if ((gamePlayer.Salvos.Count == opponent.Salvos.Count) && gamePlayer.JoinDate > opponent.JoinDate)
+                    return StatusCode(403, "No es tu turno");
+
+                gamePlayer.Salvos.Add(new Salvo 
+                {
+                    GamePlayerId = Id,
+                    Turn = gamePlayer.Salvos.Count + 1,
+                    Locations = salvo.Locations.Select(location => new SalvoLocation
+                    {
+                        Location = location.Location
+                    }).ToList()
+                });
+                _repository.Save(gamePlayer);
+                return StatusCode(201, "Creado");
+            }
+            catch(Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
     }
 }

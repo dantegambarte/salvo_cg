@@ -17,8 +17,15 @@ namespace SalvoCG.Repositories
         public GamePlayer FindById(long Id)
         {
             return FindByCondition(gp => gp.Id == Id)
+                .Include(gp => gp.Game)
+                    .ThenInclude(game => game.GamePlayers)
+                        .ThenInclude(gp => gp.Salvos)
+                .Include(gp => gp.Game)
+                    .ThenInclude(game => game.GamePlayers)
+                        .ThenInclude(gp => gp.Ships)
                 .Include(gp => gp.Player)
                 .Include(gp => gp.Ships)
+                .Include(gp => gp.Salvos)
                 .FirstOrDefault();
         }
 
