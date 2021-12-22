@@ -12,10 +12,12 @@ namespace SalvoCG.Repositories
     public abstract class RepositoryBase<T> : IRepositoryBase<T> where T : class
     {
         protected SalvoContext RepositoryContext { get; set; }
+
         public RepositoryBase(SalvoContext repositoryContext)
         {
             this.RepositoryContext = repositoryContext;
         }
+
         public void Create(T entity)
         {
             this.RepositoryContext.Set<T>().Add(entity);
@@ -31,15 +33,6 @@ namespace SalvoCG.Repositories
             return this.RepositoryContext.Set<T>().AsNoTracking();
         }
 
-        public IQueryable<T> FindByCondition(Expression<Func<T, bool>> expression)
-        {
-            return this.RepositoryContext.Set<T>().Where(expression).AsNoTrackingWithIdentityResolution();
-        }
-
-        public void Update(T entity)
-        {
-            this.RepositoryContext.Set<T>().Update(entity);
-        }
         public IQueryable<T> FindAll(Func<IQueryable<T>, IIncludableQueryable<T, object>> includes = null)
         {
             IQueryable<T> queryable = this.RepositoryContext.Set<T>();
@@ -48,7 +41,18 @@ namespace SalvoCG.Repositories
             {
                 queryable = includes(queryable);
             }
+
             return queryable.AsNoTrackingWithIdentityResolution();
+        }
+
+        public IQueryable<T> FindByCondition(Expression<Func<T, bool>> expression)
+        {
+            return this.RepositoryContext.Set<T>().Where(expression).AsNoTrackingWithIdentityResolution();
+        }
+
+        public void Update(T entity)
+        {
+            this.RepositoryContext.Set<T>().Update(entity);
         }
 
         public void SaveChanges()

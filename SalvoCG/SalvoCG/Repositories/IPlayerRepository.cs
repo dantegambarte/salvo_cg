@@ -10,5 +10,6 @@ namespace SalvoCG.Repositories
     {
         Player FindByEmail(string email);
         void Save(Player player);
+        void Update(Player player);
     }
 }

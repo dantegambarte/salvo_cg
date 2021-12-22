@@ -3,6 +3,8 @@
     data: {
         games: [],
         scores: [],
+        topLocations: [],
+        topTypes: [],
         name: "",
         email: "",
         password: "",
@@ -10,10 +12,16 @@
             tittle: "",
             message: ""
         },
-        player: null
+        currentPage: 1,
+        perPage: 7,
+        player: null,
+        avatar: null,
+        vuetify: new Vuetify()
     },
     mounted() {
         this.getGames();
+        this.getTopLocations();
+        this.getTopTypes();
     },
     methods: {
         joinGame(gId) {
@@ -41,12 +49,13 @@
         returnGame(gpId) {
             window.location.href = '/game.html?gp=' + gpId;
         },
-        getGames: function (){
+        getGames: function () {
             this.showLogin(false);
             axios.get('/api/games')
                 .then(response => {
                     this.player = response.data.email;
                     this.games = response.data.games;
+                    this.avatar = response.data.avatar;
                     this.getScores(this.games)
                     if (this.player == "Guest")
                         this.showLogin(true);
@@ -63,14 +72,64 @@
         },
         showLogin: function (show) {
             if (show) {
-                $("#login-form").show();
-                $("#login-form").trigger("reset");
+                $('#botonLogin').show();
+                $('#botonRegister').show();
                 this.email = "";
                 this.password = "";
+            } else {
+                $('#exampleModal').modal('hide');
+                $('#botonLogin').hide();
+                $('#botonRegister').hide();
+                /*$("#botonLogin").css({
+                    display: "none",
+                    visibility: "hidden"
+                });*/
             }
-            else
-                $("#login-form").hide();
         },
+
+
+        mostrarFormLogin: function () {
+            $('#signin-btn').hide();
+            $('#login-btn').show();
+            $('#titleForm').text("Login");
+            $('#inputLoginName').hide();
+        },
+
+        mostrarFormRegister: function () {
+            $('#login-btn').hide();
+            $('#signin-btn').show();
+            $('#titleForm').text("Register");
+            $('#inputLoginName').show();
+        },
+
+
+
+        getTopLocations: function () {
+            axios.get('/api/games/topLocations')
+                .then(response => {
+                    this.topLocations = response.data;
+                })
+                .catch(error => {
+                    alert("error al obtener los datos");
+                });
+        },
+        getTopTypes: function () {
+            axios.get('/api/games/topTypes')
+                .then(response => {
+                    this.topTypes = response.data;
+                })
+                .catch(error => {
+                    alert("error al obtener los datos");
+                });
+        },
+
+        moveToPerfil: function () {
+            window.location.href = '/perfil.html';
+        },
+
+
+
+
         logout: function () {
             axios.post('/api/auth/logout')
                 .then(result => {
@@ -83,9 +142,10 @@
                     alert("Ocurrió un error al cerrar sesión");
                 });
         },
-        login: function(event){
+        login: function (event) {
             axios.post('/api/auth/login', {
-                name: this.name, email: this.email, password: this.password
+                email: this.email,
+                password: this.password
             })
                 .then(result => {
                     if (result.status == 200) {
@@ -94,22 +154,23 @@
                     }
                 })
                 .catch(error => {
-                    console.log("error, código de estatus: " + error.response.status);
-                    if (error.response.status == 401) {
-                        this.modal.tittle = "Falló la autenticación";
-                        this.modal.message = "Email o contraseña inválido"
-                        this.showModal(true);
-                    }
-                    else {
-                        this.modal.tittle = "Fall&Oacute;la autenticaci&oacute;n";
-                        this.modal.message = "Ha ocurrido un error";
-                        this.showModal(true);
-                    }
+
+                    const message = $('.messageNone');
+                    message.text("Email o contraseña invalidos");
+                    message.removeClass('messageNone');
+                    message.addClass('messageError');
+
+                    setTimeout(() => {
+                        message.removeClass('messageError');
+                        message.addClass('messageNone');
+                    }, 4000);
                 });
         },
         signin: function (event) {
             axios.post('/api/players', {
-                email: this.email, password: this.password
+                name: this.name,
+                email: this.email,
+                password: this.password
             })
                 .then(result => {
                     if (result.status == 201) {
@@ -117,17 +178,20 @@
                     }
                 })
                 .catch(error => {
-                    console.log("error, código de estatus: " + error.response.status);
-                    if (error.response.status == 403) {
-                        this.modal.tittle = "Falló el registro";
-                        this.modal.message = error.response.data
-                        this.showModal(true);
+                    const message = $('.messageNone');
+                    let messageFront = VerifyForm(this.name, this.email, this.password);
+                    if (messageFront === "Ok") {
+                        message.text(error.response.data);
+                    } else {
+                        message.text(messageFront);
                     }
-                    else {
-                        this.modal.tittle = "Fall&Oacute;la autenticaci&oacute;n";
-                        this.modal.message = "Ha ocurrido un error";
-                        this.showModal(true);
-                    }
+                    message.removeClass('messageNone');
+                    message.addClass('messageError');
+
+                    setTimeout(() => {
+                        message.removeClass('messageError');
+                        message.addClass('messageNone');
+                    }, 4000);
                 });
         },
         getScores: function (games) {
@@ -150,8 +214,7 @@
                         }
                         score.total += gp.point;
                         scores.push(score);
-                    }
-                    else {
+                    } else {
                         switch (gp.point) {
                             case 1:
                                 scores[index].win++;
@@ -167,13 +230,62 @@
                     }
                 })
             })
-            app.scores = scores;
-        }
+
+            scores.sort(function (a, b) {
+                // a and b will here be two objects from the array 
+                // thus a[1] and b[1] will equal the names 
+                // if they are equal, return 0 (no sorting) 
+                if (a['total'] == b['total']) { return 0; }
+                if (a['total'] > b['total']) {
+                    // if a should come after b, return 1 
+                    return -1;
+                } else { // if b should come after a, return -1 
+                    return 1;
+                }
+            });
+            console.log("Score despues de cortar");
+
+            app.scores = scores.slice(0, 5);
+        },
+        getImgUrl(image) {
+            return `../images/${image}.png`
+        },
+
+
     },
     filters: {
         dateFormat(date) {
-            return moment(date).format('LLL');
+            return moment(date).format('DD-MM-YYYY');
         }
+    },
+    computed: {
+        lists() {
+            const items = this.games;
+            // Return just page of items needed
+            return items.slice(
+                (this.currentPage - 1) * this.perPage,
+                this.currentPage * this.perPage
+            )
+        },
+        totalRows() {
+            return this.games.length
+        },
+
+    },
+    created() {
+        this.getGames();
     }
 })
 
+VerifyForm = (name = "", mail = "", password = "") => {
+    if (name === "") {
+        return "Debe ingresar un nombre";
+    }
+    if (mail === "") {
+        return "Debe ingresar un email";
+    }
+    if (password === "") {
+        return "Debe ingresar una contraseña";
+    }
+    return "Ok";
+};

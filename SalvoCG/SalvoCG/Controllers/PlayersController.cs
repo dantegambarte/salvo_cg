@@ -5,6 +5,9 @@ using SalvoCG.Repositories;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mail;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -15,70 +18,156 @@ namespace SalvoCG.Controllers
     public class PlayersController : ControllerBase
     {
         private IPlayerRepository _repository;
+
         public PlayersController(IPlayerRepository repository)
         {
             _repository = repository;
         }
 
         [HttpPost]
-        public IActionResult Post([FromBody] PlayerDTO player)
+        public IActionResult Post([FromBody] PlayerDTO playerDTO)
         {
-            try
-            {
-                //cantidad de caracteres, mayusculas, numeros | verificar estandar de claves? | revisar expresiones regulares
+            bool CamposInvalidos = false;
+            string MensajeError = "", mensajeErrorPassword = "";
 
-                if (String.IsNullOrEmpty(player.Email) && String.IsNullOrEmpty(player.Password) && String.IsNullOrEmpty(player.Name))
-                    return StatusCode(403, "Campos vacios");
-                else
+            #region Validaciones
+            if (string.IsNullOrEmpty(playerDTO.Name))
+            {
+                CamposInvalidos = true;
+                MensajeError = (string.IsNullOrEmpty(MensajeError)) ? "The Name cannot be Empty" : MensajeError + " - The Name cannot be Empty";
+            }
+            if (!isValidName(playerDTO.Name))
+            {
+                CamposInvalidos = true;
+                MensajeError = (string.IsNullOrEmpty(MensajeError)) ? "The Name is not valid" : MensajeError + " - The Name is not valid";
+            }
+            if (string.IsNullOrEmpty(playerDTO.Email))
+            {
+                CamposInvalidos = true;
+                MensajeError = (string.IsNullOrEmpty(MensajeError)) ? "The Email cannot be Empty" : MensajeError + " - The Email cannot be Empty";
+            }
+            if (!isValidEmail(playerDTO.Email))
+            {
+                CamposInvalidos = true;
+                MensajeError = (string.IsNullOrEmpty(MensajeError)) ? "The Email is not valid" : MensajeError + " - The Email is not valid";
+            }
+            if (string.IsNullOrEmpty(playerDTO.Password))
+            {
+                CamposInvalidos = true;
+                MensajeError = (string.IsNullOrEmpty(MensajeError)) ? "The Password cannot be Empty" : MensajeError + " - The Password cannot be Empty";
+            }
+            if (!IsValidPassword(playerDTO.Password, out mensajeErrorPassword))
+            {
+                CamposInvalidos = true;
+                MensajeError = (string.IsNullOrEmpty(MensajeError)) ? mensajeErrorPassword : MensajeError + " - " + mensajeErrorPassword;
+            }
+            #endregion
+
+            if (!CamposInvalidos)
+            {
+                Player newPlayer = _repository.FindByEmail(playerDTO.Email);
+                if (newPlayer == null)
                 {
-                    if (String.IsNullOrEmpty(player.Email)) return StatusCode(403, "Email vacío");
-                    if (String.IsNullOrEmpty(player.Password)) return StatusCode(403, "Password vacío");
-                    if (String.IsNullOrEmpty(player.Name)) return StatusCode(403, "Nombre vacío");
-                    if (VerificalEmail(player.Email) == false)
+                    byte[] data = Encoding.ASCII.GetBytes(playerDTO.Password);
+                    data = new SHA256Managed().ComputeHash(data);
+                    string passwordHash = Encoding.ASCII.GetString(data);
+
+                    newPlayer = new Player
                     {
-                        return StatusCode(403, "Escriba bien su email");
-                    }
-                }
+                        Name = playerDTO.Name,
+                        Email = playerDTO.Email,
+                        Password = passwordHash,
+                        Avatar = "1.jpg"
+                    };
 
-                    Player dbPlayer = _repository.FindByEmail(player.Email);
-                if(dbPlayer != null) return StatusCode(403, "Email está en uso");
+                    _repository.Save(newPlayer);
 
-                Player newPlayer = new Player
-                {
-                    Email = player.Email,
-                    Password = player.Password,
-                    Name = player.Name
-                };
-
-                _repository.Save(newPlayer);
-                return StatusCode(201, newPlayer);
-
-            }
-            catch(Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
-        }
-
-        private Boolean VerificalEmail(string email)
-        {
-            String expresion;
-            expresion = @"^([\w\.\-]+)@([\w\-]+)((\.(\w){2,3})+)$";
-            if (Regex.IsMatch(email, expresion))
-            {
-                if (Regex.Replace(email, expresion, String.Empty).Length == 0)
-                {
-                    return true;
+                    return StatusCode(201, "Creado");
                 }
                 else
                 {
-                    return false;
+                    return StatusCode(403, "Email en uso");
                 }
             }
             else
             {
+                return StatusCode(403, MensajeError);
+            }
+        }
+
+        public bool isValidName(string Name)
+        {
+            var hasBetween3And30Chars = new Regex(@".{3,30}");
+
+            return hasBetween3And30Chars.IsMatch(Name);
+        }
+        public bool isValidEmail(string Email)
+        {
+            var hasBetween10And30Chars = new Regex(@".{10,30}");
+
+            bool hasValidFormat = true;
+
+            if (Email == null || Email == "")
+            {
+                hasValidFormat = false;
+                return hasValidFormat;
+            }
+
+            try
+            {
+                MailAddress address = new MailAddress(Email);
+                hasValidFormat = (address.Address == Email);
+                // or
+                // isValid = string.IsNullOrEmpty(address.DisplayName);
+            }
+            catch (FormatException)
+            {
+                hasValidFormat = false;
+            }
+
+            return hasValidFormat && hasBetween10And30Chars.IsMatch(Email);
+        }
+        public bool IsValidPassword(string password, out string ErrorMessage)
+        {
+            var minLength = 8;
+            var numUpper = 1;
+            var numLower = 1;
+            var numNumbers = 1;
+            var numSpecial = 1;
+
+            var upper = new Regex("[A-Z]");
+            var lower = new Regex("[a-z]");
+            var number = new Regex("[0-9]");
+            var special = new Regex("[^a-zA-Z0-9]");
+
+            if (password.Length < minLength)
+            {
+                ErrorMessage = "Password should not be less than or greater than 8 characters";
                 return false;
             }
+            if (upper.Matches(password).Count < numUpper)
+            {
+                ErrorMessage = "Password should contain at least one upper case letter";
+                return false;
+            }
+            if (lower.Matches(password).Count < numLower)
+            {
+                ErrorMessage = "Password should contain at least one lower case letter";
+                return false;
+            }
+            if (number.Matches(password).Count < numNumbers)
+            {
+                ErrorMessage = "Password should contain At least one numeric value";
+                return false;
+            }
+            if (special.Matches(password).Count < numSpecial)
+            {
+                ErrorMessage = "Password should contain at least one special case character";
+                return false;
+            }
+
+            ErrorMessage = string.Empty;
+            return true;
         }
     }
 }

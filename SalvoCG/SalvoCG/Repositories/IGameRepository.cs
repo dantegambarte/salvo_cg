@@ -6,10 +6,13 @@ using System.Threading.Tasks;
 
 namespace SalvoCG.Repositories
 {
-    public interface IGameRepository : IRepositoryBase<Game>
+    public interface IGameRepository
     {
         IEnumerable<Game> GetAllGames();
-        IEnumerable<Game> GetAllGamesWhitPlayers();
-        Game FindById(long Id);
+        IEnumerable<Game> GetAllGamesWithPlayers();
+        IEnumerable<Game> GetAllSalvoLocations();
+        IEnumerable<Game> GetAllGamesWithPlayersAndSalvos();
+        Game FindById(long id);
+        IEnumerable<Game> GetGamesFromPlayer(long id);
     }
 }

@@ -5,31 +5,56 @@ var app = new Vue({
     el: '#app',
     data: {
         gameView: {},
-        player: { email: null },
-        opponent: { email: null },
-        salvoCount: 0
+        player: { email: null, avatar: null },
+        opponent: { email: null, avatar: null },
+        salvoCount: 0,
+        gameState: "",
+        avatar: "",
+        interval: null,
+        vuetify: new Vuetify()
     },
     mounted() {
-        axios.get('/api/gamePlayers/'+gpId)
+        axios.get('/api/gamePlayers/' + gpId)
             .then(response => {
                 this.gameView = response.data;
                 var static = this.gameView.ships && this.gameView.ships.length > 0;
                 getPlayers(this.gameView, gpId);
-                initializeGrid(this.gameView,static);
+                initializeGrid(this.gameView, static);
                 placeShips(this.gameView.ships);
-                placeSalvos(this.gameView.salvos, this.player.id, this.gameView.ships);
-                if (!static)    
+                if (!static)
                     addEventsShips();
                 else
                     addEventsSalvo();
-                placeSinksShips(this.gameView.sunks, this.gameView.sunksOpponent);
-                placeHits(this.gameView.hits);
+                this.getGameData();
             })
             .catch(error => {
                 alert("error al obtener los datos");
             })
     },
     methods: {
+        getGameData: function () {
+            placeSalvos(this.gameView.salvos, this.player.id, this.gameView.ships);
+            placeSinksShips(this.gameView.sunks, this.gameView.sunksOpponent);
+            placeHits(this.gameView.hits);
+            this.gameState = getGameState(this.gameView.gameState);
+            if (this.gameView.gameState == 'WAIT') {
+                if (this.interval == null)
+                    this.interval = setInterval(this.refresh, 10000);
+            } else {
+                clearInterval(this.interval);
+                this.interval = null;
+            }
+        },
+        moveToPerfil: function () {
+            window.location.href = '/perfil.html';
+        },
+        refresh: function () {
+            axios.get('/api/gamePlayers/' + gpId)
+                .then(response => {
+                    this.gameView = response.data;
+                    this.getGameData();
+                });
+        },
         logout: function () {
             axios.post('/api/auth/logout')
                 .then(result => {
@@ -94,15 +119,15 @@ var app = new Vue({
                 salvo.turn = 0;
                 salvo.locations = cellsArray;
                 this.postSalvos(salvo);
-            }
-            else {
+            } else {
                 alert("error: debe indicar todas las posiciones de los salvos");
             }
         },
         postSalvos: function (salvos) {
             axios.post('/api/gamePlayers/' + this.gameView.id + '/salvos', salvos)
                 .then(response => {
-                    window.location.reload();
+                    app.salvoCount = 0;
+                    app.refresh();
                 })
                 .catch(error => {
                     alert("error: " + error.response.data);
@@ -111,12 +136,14 @@ var app = new Vue({
     }
 })
 
-function getPlayers(gameView,gpId) {
+function getPlayers(gameView, gpId) {
     gameView.gamePlayers.forEach(gp => {
-        if (gp.id == gpId)
+        if (gp.id == gpId) {
             app.player = gp.player;
-        else
+        } else {
             app.opponent = gp.player;
+        }
+
     });
 }
 
@@ -190,8 +217,7 @@ function placeShips(ships) {
                     xInGrid, yInGrid, 1, ship.locations.length, false);
             }
         })
-    }
-    else {
+    } else {
         grid.addWidget($('<div id="PatroalBoat"><div class="grid-stack-item-content PatroalBoatHorizontal"></div><div/>'), 0, 0, 2, 1, false);
         grid.addWidget($('<div id="Destroyer"><div class="grid-stack-item-content DestroyerHorizontal"></div><div/>'), 0, 1, 3, 1, false);
         grid.addWidget($('<div id="Submarine"><div class="grid-stack-item-content SubmarineHorizontal"></div><div/>'), 0, 2, 3, 1, false);
@@ -201,6 +227,8 @@ function placeShips(ships) {
 }
 
 function placeSalvos(salvos, playerId, ships) {
+    $('td').removeClass('shoot');
+    app.salvoCount = 0;
     salvos = JSON.parse(JSON.stringify(salvos));
     const shitPositions = [];
     ships.forEach(ship => ship.locations.forEach(location => { shitPositions.push(location.location) }))
@@ -211,8 +239,7 @@ function placeSalvos(salvos, playerId, ships) {
                 $('#' + location.location).addClass("shooted");
                 $('#' + location.location).text(salvo.turn);
             })
-        }
-        else {
+        } else {
             salvo.locations.forEach(location => {
                 if (shitPositions.indexOf(location.location) != -1) {
                     location.location = location.location.replace(/A/g, '0');
@@ -249,7 +276,7 @@ function addEventsShips() {
                 $(this).children('.grid-stack-item-content').addClass($(this).attr('id') + "Vertical");
             }
         } else {
-            if (grid.isAreaEmpty(posX + 1, posY, h - 1 , w) && posX + h <= 10) {
+            if (grid.isAreaEmpty(posX + 1, posY, h - 1, w) && posX + h <= 10) {
                 grid.update($(this), posX, posY, h, w);
                 $(this).children('.grid-stack-item-content').addClass($(this).attr('id') + "Horizontal");
                 $(this).children('.grid-stack-item-content').removeClass($(this).attr('id') + "Vertical");
@@ -264,8 +291,7 @@ function addEventsSalvo() {
             if ($(this).hasClass('shoot')) {
                 $(this).removeClass('shoot');
                 app.salvoCount--;
-            }
-            else {
+            } else {
                 $(this).addClass('shoot');
                 app.salvoCount++;
             }
@@ -292,10 +318,35 @@ function placeHits(playerHits) {
 function placeSinksShips(playerSunks, opponentSunks) {
     if (playerSunks != null)
         playerSunks.forEach(function (sunk) {
-            $("#" + sunk + "Icon").attr("src", "img/" + sunk.toLowerCase() +"sunk.png");
+            $("#" + sunk + "Icon").attr("src", "img/" + sunk.toLowerCase() + "sunk.png");
         })
     if (opponentSunks != null)
         opponentSunks.forEach(function (sunk) {
             $("#Opponent" + sunk + "Icon").attr("src", "img/" + sunk.toLowerCase() + "sunk.png");
         })
+}
+
+function getGameState(gameState) {
+    var state = "";
+    switch (gameState) {
+        case 'ENTER_SALVO':
+            state = 'Capitán, dispare las salvas'
+            break;
+        case 'PLACE_SHIPS':
+            state = 'Capitán, posicione los barcos'
+            break;
+        case 'WAIT':
+            state = 'Capitán, debe esperar la recarga de las armas'
+            break;
+        case 'WIN':
+            state = 'Capitán, ha ganado la batalla'
+            break;
+        case 'LOSS':
+            state = 'Capitán, ha perdido la batalla'
+            break;
+        case 'TIE':
+            state = 'Capitán, ha empatado'
+            break;
+    }
+    return state;
 }

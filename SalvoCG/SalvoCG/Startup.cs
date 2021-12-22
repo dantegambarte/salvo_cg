@@ -27,26 +27,27 @@ namespace SalvoCG
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+
             services.AddRazorPages();
-            //inyeccion de dependencia para salvo context
-            services.AddDbContext<SalvoContext>(opt=>opt.UseSqlServer(Configuration.GetConnectionString("SalvoCGDataBase")));
-            //inyectar repository de game
+            //inyección de dependencia para salvo context
+            services.AddDbContext<SalvoContext>(opt =>
+                opt.UseSqlServer(Configuration.GetConnectionString("SalvoDataBase"),
+                 o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
+
             services.AddScoped<IGameRepository, GameRepository>();
             services.AddScoped<IGamePlayerRepository, GamePlayerRepository>();
             services.AddScoped<IPlayerRepository, PlayerRepository>();
-
-            //autenticacion
+            services.AddScoped<IScoreRepository, ScoreRepository>();
             services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
                 .AddCookie(options =>
                 {
                     options.ExpireTimeSpan = TimeSpan.FromMinutes(10);
                     options.LoginPath = new PathString("/index.html");
-                });
 
-            //autorizacion
-            services.AddAuthorization(option => 
+                });
+            services.AddAuthorization(options =>
             {
-                option.AddPolicy("PlayerOnly", policy => policy.RequireClaim("Player"));
+                options.AddPolicy("PlayerOnly", policy => policy.RequireClaim("Player"));
             });
         }
 
@@ -65,15 +66,10 @@ namespace SalvoCG
             app.UseStaticFiles();
 
             app.UseRouting();
-            //le decimos que use autenticacion
+
             app.UseAuthentication();
 
             app.UseAuthorization();
-
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapRazorPages();
-            });
 
             app.UseEndpoints(endpoints =>
             {
@@ -82,6 +78,8 @@ namespace SalvoCG
                 name: "default",
                 pattern: "{controller=games}/{ action = Get}");
             });
+
+
         }
     }
 }
